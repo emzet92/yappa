@@ -10,6 +10,7 @@ enum RoomState:
   case Revealed
 
 case class ParticipantId(value: UUID)
+
 case class RoomId(value: UUID)
 
 case class Participant(
@@ -46,20 +47,11 @@ case class Room(
                  participants: Map[ParticipantId, Participant],
                  currentRound: Option[Round]
                ):
-
-  // =====================
-  // Participant management
-  // =====================
-
   def addParticipant(participant: Participant): Room =
     copy(participants = participants.updated(participant.id, participant))
 
   def removeParticipant(participantId: ParticipantId): Room =
     copy(participants = participants - participantId)
-
-  // =====================
-  // Voting lifecycle
-  // =====================
 
   def startVoting(now: Instant): Either[String, Room] =
     state match
@@ -109,7 +101,6 @@ case class Room(
       state = RoomState.Waiting,
       currentRound = None
     )
-  
 
   def allParticipantsVoted: Boolean =
     currentRound match
@@ -127,4 +118,3 @@ object Room:
       participants = Map.empty,
       currentRound = None
     )
-
