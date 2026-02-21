@@ -8,9 +8,30 @@ import org.http4s.dsl.io.*
 
 import java.time.Instant
 import java.util.UUID
+import io.circe.*
+import io.circe.generic.semiauto.*
+import org.http4s.circe.*
+import org.http4s.circe.CirceEntityEncoder.circeEntityEncoder
 
+given Encoder[RoomResponse] = deriveEncoder
+
+case class RoomResponse(id: String)
+
+extension (room: Room)
+  def toRoomResponse = RoomResponse(room.id.value.toString)
 
 object Main extends IOApp.Simple:
+
+  val mateusz = Participant(
+    ParticipantId(UUID.randomUUID()),
+    "Mateusz",
+    true)
+
+  val stringOrRoom = Room.create("some-session")
+    .addParticipant(mateusz)
+    .startVoting(Instant.now()).getOrElse(null)
+
+  val romRepository = Map("1" -> stringOrRoom)
 
   val logo =
     """
@@ -29,21 +50,17 @@ object Main extends IOApp.Simple:
     case GET -> Root / "health" =>
       Ok("healthy")
 
+    case GET -> Root / "room" / id =>
+    romRepository.get(id) match
+      case Some(room) => Ok(room.toRoomResponse)
+      case None       => NotFound()
+
+
     case req@POST -> Root / "echo" =>
       req.as[String].flatMap(body => Ok(body))
 
   private val app: HttpApp[IO] =
     routes.orNotFound
-
-  val mateusz = Participant(
-    ParticipantId(UUID.randomUUID()),
-    "Mateusz",
-    true)
-
-  val stringOrRoom = Room.create("some-session")
-    .addParticipant(mateusz)
-    .startVoting(Instant.now())
-  println(stringOrRoom)
 
   override def run: IO[Unit] =
     for
