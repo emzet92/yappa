@@ -53,7 +53,13 @@ object Main extends IOApp.Simple:
     case GET -> Root / "room" / id =>
     romRepository.get(id) match
       case Some(room) => Ok(room.toRoomResponse)
-      case None       => NotFound()
+      case None       => NotFound() 
+      
+      
+    case req @ GET -> Root / "ui" =>
+        StaticFile
+          .fromResource("/public/index.html", Some(req))
+          .getOrElseF(NotFound())
 
 
     case req@POST -> Root / "echo" =>

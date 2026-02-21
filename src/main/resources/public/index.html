@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <title>Yappa – Planning Poker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          margin: 40px;
+          background: #f7f7f7;
+        }
+
+        h1 {
+          margin-bottom: 10px;
+        }
+
+        .card {
+          background: white;
+          padding: 20px;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          margin-bottom: 20px;
+          max-width: 400px;
+        }
+
+        button {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          background: #4f46e5;
+          color: white;
+          font-weight: 500;
+        }
+
+        button:hover {
+          background: #4338ca;
+        }
+
+        .result {
+          margin-top: 10px;
+          font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+<h1>🃏 Yappa – Planning Poker</h1>
+
+<div class="card">
+    <h3>Health Check</h3>
+    <button onclick="checkHealth()">Sprawdź</button>
+    <div id="health-result" class="result"></div>
+</div>
+
+<div class="card">
+    <h3>Pobierz Room (id = 1)</h3>
+    <button onclick="loadRoom()">Załaduj</button>
+    <pre id="room-result" class="result"></pre>
+</div>
+
+<script>
+    async function checkHealth() {
+      const res = await fetch("/health");
+      const text = await res.text();
+      document.getElementById("health-result").innerText = text;
+    }
+
+    async function loadRoom() {
+      const res = await fetch("/room/1");
+
+      if (!res.ok) {
+        document.getElementById("room-result").innerText =
+          "Room not found";
+        return;
+      }
+
+      const data = await res.json();
+      document.getElementById("room-result").innerText =
+        JSON.stringify(data, null, 2);
+    }
+</script>
+</body>
+</html>
