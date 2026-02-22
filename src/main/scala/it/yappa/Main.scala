@@ -64,7 +64,7 @@ object Main extends IOApp.Simple:
               BadRequest("invalid json body")
 
           case Right(body) =>
-            planningPoker.create(body).attempt.flatMap {
+            planningPoker.createRoom(body).attempt.flatMap {
               case Right(created) =>
                 Created(created.toRoomResponse) // requires Encoder[CreateResponseType]
 

@@ -10,7 +10,7 @@ import it.yappa.Room.CreateRoomRequest
 import java.util.UUID
 
 class PlanningPoker[F[_] : Monad](repository: RoomRepository[F]) {
-  def create(req: CreateRoomRequest): F[Room] = repository.save(Room.create(req))
+  def createRoom(req: CreateRoomRequest): F[Room] = repository.save(Room.create(req))
 
   def find(id: String): F[RoomResponse] = repository
     .get(RoomId(UUID.fromString(id)))
