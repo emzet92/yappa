@@ -56,7 +56,7 @@ object Main extends IOApp.Simple:
             logAnd500(s"GET /room/$id failed", e)
         }
 
-      case req @ POST -> Root / "room" =>
+      case req@POST -> Root / "room" =>
         req.as[CreateRoomRequest].attempt.flatMap {
           case Left(e) =>
             // To zwykle będzie błąd dekodowania JSON – semantycznie 400
@@ -73,24 +73,29 @@ object Main extends IOApp.Simple:
             }
         }
 
-      case req @ GET -> Root / "ui" =>
+      case PUT -> Root / "room" / id =>
+        planningPoker.startVoting(id)
+          .flatMap(room => Ok(room.toRoomResponse))
+          .handleErrorWith(_ => BadRequest("Sssij pałe"))
+
+      case req@GET -> Root / "ui" =>
         StaticFile
           .fromResource("/public/index.html", Some(req))
           .getOrElseF(NotFound())
 
-      case req @ GET -> Root / "game" =>
+      case req@GET -> Root / "game" =>
         StaticFile
           .fromResource("/public/game.html", Some(req))
           .getOrElseF(NotFound())
 
-      case req @ POST -> Root / "echo" =>
+      case req@POST -> Root / "echo" =>
         req.as[String].flatMap(body => Ok(body))
 
   override def run: IO[Unit] =
     for
       start <- Clock[IO].monotonic
-      _     <- IO.println(logo)
-      _     <- IO.println("Starting HTTP server...")
+      _ <- IO.println(logo)
+      _ <- IO.println("Starting HTTP server...")
 
       planningPoker <- PlanningPoker.create[IO]
 
@@ -102,9 +107,9 @@ object Main extends IOApp.Simple:
         .build
         .evalTap { _ =>
           for
-            end  <- Clock[IO].monotonic
-            took  = (end - start).toMillis
-            _    <- IO.println(s"HTTP server started in ${took} ms 🚀")
+            end <- Clock[IO].monotonic
+            took = (end - start).toMillis
+            _ <- IO.println(s"HTTP server started in ${took} ms 🚀")
           yield ()
         }
         .useForever
