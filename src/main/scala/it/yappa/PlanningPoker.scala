@@ -29,11 +29,22 @@ object PlanningPoker:
 given Encoder[ValidResponse] = deriveEncoder
 
 trait RoomResponse
-case class ValidResponse(id: String) extends RoomResponse
+
+case class ValidResponse(id: String, roomName: String, participants: List[String]) extends RoomResponse
+
 case object InvalidResponse extends RoomResponse
 
+
+extension (p: Map[ParticipantId, Participant]) {
+  def toResponse = p.toList.map(p1 => p1._2.name)
+}
+
 extension (room: Room)
-  def toRoomResponse = ValidResponse(room.id.value.toString)
+  def toRoomResponse = ValidResponse(
+    id = room.id.value.toString,
+    roomName = room.roomName,
+    participants = room.participants.toResponse
+  )
 
 
 trait RoomRepository[F[_]]:
