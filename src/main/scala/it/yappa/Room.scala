@@ -42,7 +42,7 @@ case class Round(
 
 case class Room(
                  id: RoomId,
-                 adminSessionId: String,
+                 roomName: String,
                  state: RoomState,
                  participants: Map[ParticipantId, Participant],
                  currentRound: Option[Round]
@@ -110,11 +110,20 @@ case class Room(
         false
 
 object Room:
-  def create(adminSessionId: String): Room =
+  def create(request: CreateRoomRequest): Room = {
+    val participant = Participant(
+      id = ParticipantId(UUID.randomUUID()),
+      name = request.ownerName,
+      isAdmin = true,
+    )
+
     Room(
       id = RoomId(UUID.randomUUID()),
-      adminSessionId = adminSessionId,
+      roomName = request.roomName,
       state = RoomState.Waiting,
-      participants = Map.empty,
+      participants = Map(participant.id -> participant),
       currentRound = None
     )
+  }
+
+  case class CreateRoomRequest(roomName: String, ownerName: String)
