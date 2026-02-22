@@ -32,4 +32,5 @@ libraryDependencies ++= Seq(
   "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
 )
 
+assembly := (assembly dependsOn Test / test).value
 assembly / assemblyJarName := "planning-poker-app.jar"
