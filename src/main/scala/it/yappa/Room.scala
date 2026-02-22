@@ -127,3 +127,5 @@ object Room:
   }
 
   case class CreateRoomRequest(roomName: String, ownerName: String)
+
+  case class SubmitVoteRequest(participantId: String, value: String)

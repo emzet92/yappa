@@ -6,16 +6,16 @@ import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.circe.*
-
 import io.circe.*
 import io.circe.generic.semiauto.*
-
-import it.yappa.Room.CreateRoomRequest
+import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 
 // ===== JSON request decoding =====
 given Decoder[CreateRoomRequest] = deriveDecoder
 given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
+given Decoder[SubmitVoteRequest] = deriveDecoder
+given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
 
 object Main extends IOApp.Simple:
 
@@ -88,8 +88,13 @@ object Main extends IOApp.Simple:
           .fromResource("/public/game.html", Some(req))
           .getOrElseF(NotFound())
 
-      case req@POST -> Root / "echo" =>
-        req.as[String].flatMap(body => Ok(body))
+      case req@PUT -> Root / "room" / roomId / "vote" =>
+        req.as[SubmitVoteRequest].flatMap { body =>
+        planningPoker.submitVote(roomId, body).attempt.flatMap {
+          case Right(room) => Ok(room.toRoomResponse)
+          case Left(_) => BadRequest("Invalid vote")
+        }
+      }
 
   override def run: IO[Unit] =
     for

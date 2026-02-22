@@ -2,21 +2,30 @@ package it.yappa
 
 import cats.Monad
 import cats.effect.{Ref, Sync}
-import cats.implicits.toFunctorOps
+import cats.implicits.{toFlatMapOps, toFunctorOps}
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveEncoder
-import it.yappa.Room.CreateRoomRequest
+import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
 
 import java.time.Instant
 import java.util.UUID
 
 class PlanningPoker[F[_] : Monad](repository: RoomRepository[F]) {
   def createRoom(req: CreateRoomRequest): F[Room] = repository.save(Room.create(req))
-  
+
   def startVoting(roomId: String): F[Room] = repository.get(RoomId(UUID.fromString(roomId))).map {
     case Some(value) => value.startVoting(Instant.now()).getOrElse(null)
     case None => ???
   }
+
+  def submitVote(roomId: String, req: SubmitVoteRequest): F[Room] =
+    repository.get(RoomId(UUID.fromString(roomId))).flatMap {
+      case None => ???
+      case Some(room) =>
+        val submittedVote = room
+          .submitVote(ParticipantId(UUID.fromString(req.participantId)), req.value).getOrElse(null)
+        repository.save(submittedVote)
+    }
 
   def find(id: String): F[RoomResponse] = repository
     .get(RoomId(UUID.fromString(id)))
