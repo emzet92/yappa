@@ -89,8 +89,7 @@
     <h1>Utwórz nowy pokój</h1>
     <p>Podaj nazwę pokoju i swój nick, żeby rozpocząć planning poker.</p>
 
-    <!-- Ustaw action na swój endpoint, np. /rooms -->
-    <form method="post" action="/rooms">
+    <form id="createRoomForm" method="post" action="/game">
         <div class="row">
             <div>
                 <label for="roomName">Nazwa pokoju</label>
@@ -107,16 +106,16 @@
             </div>
 
             <div>
-                <label for="nickname">Nick</label>
+                <label for="ownerName">Nick</label>
                 <input
-                        id="nickname"
-                        name="nickname"
+                        id="ownerName"
+                        name="ownerName"
                         type="text"
                         placeholder="np. Mateusz"
                         required
                         minlength="2"
                         maxlength="32"
-                        autocomplete="nickname"
+                        autocomplete="ownerName"
                 />
             </div>
         </div>
@@ -128,5 +127,46 @@
         <div class="hint">Po utworzeniu dostaniesz link do udostępnienia zespołowi.</div>
     </form>
 </main>
+<script>
+    document.getElementById("createRoomForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const roomName = document.getElementById("roomName").value.trim();
+      const nickname = document.getElementById("ownerName").value.trim();
+
+      if (!roomName || !nickname) {
+        alert("Both fields are required");
+        return;
+      }
+
+      try {
+        const response = await fetch("/room", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            roomName: roomName,
+            ownerName: nickname
+          })
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          alert("Failed to create room: " + text);
+          return;
+        }
+
+        const data = await response.json();
+
+        // 🔥 przekierowanie na stronę game
+        window.location.href = `/game?id=${data.id}`;
+
+      } catch (error) {
+        console.error("Error creating room:", error);
+        alert("Something went wrong");
+      }
+    });
+</script>
 </body>
 </html>

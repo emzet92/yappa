@@ -11,10 +11,14 @@ import java.time.Instant
 import java.util.UUID
 
 class PlanningPoker[F[_] : Monad](repository: RoomRepository[F]) {
-  def createRoom(req: CreateRoomRequest): F[Room] = repository.save(Room.create(req))
+  def createRoom(req: CreateRoomRequest): F[Room] = {
+    println(s"Create room!! $req")
+    repository.save(Room.create(req))
+  }
 
   def startVoting(roomId: String): F[Room] = repository.get(RoomId(UUID.fromString(roomId))).flatMap {
-    case Some(value) => repository.save(value.startVoting(Instant.now()).getOrElse(null))
+    case Some(value) =>
+      repository.save(value.startVoting(Instant.now()).getOrElse(null))
     case None => ???
   }
 
