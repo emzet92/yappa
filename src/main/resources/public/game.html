@@ -16,6 +16,8 @@
           --green: #10b981;
           --orange: #f59e0b;
           --red: #ef4444;
+          --viewer: #3b82f6;
+          --viewer-bg: #eff6ff;
         }
 
         * { box-sizing: border-box; }
@@ -58,13 +60,14 @@
           padding: 40px;
         }
 
-        /* USERS */
+        /* USERS BAR (one line) */
 
-        .users {
+        .users-bar {
           display: flex;
-          gap: 12px;
           flex-wrap: wrap;
-          margin-bottom: 24px;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 30px;
         }
 
         .user-badge {
@@ -85,6 +88,32 @@
           background: var(--green);
         }
 
+        .viewer-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--viewer-bg);
+          padding: 6px 12px;
+          border-radius: 999px;
+          border: 1px solid #dbeafe;
+          font-size: 13px;
+          color: var(--viewer);
+        }
+
+        .viewer-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: var(--viewer);
+        }
+
+        .separator {
+          width: 1px;
+          height: 20px;
+          background: var(--border);
+          margin: 0 8px;
+        }
+
         /* VOTE AREA */
 
         .vote-area {
@@ -100,7 +129,15 @@
 
         .cards {
           display: flex;
-          gap: 28px;
+          gap: 40px;
+          align-items: flex-start;
+        }
+
+        .card-group {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
         }
 
         .card {
@@ -120,10 +157,19 @@
         .card.orange { background: var(--orange); }
         .card.red { background: var(--red); }
 
+        .card-users {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 13px;
+          color: var(--muted);
+          text-align: center;
+        }
+
         /* DECK */
 
         .deck {
-          margin-top: 40px;
+          margin-top: 50px;
           display: flex;
           gap: 16px;
           justify-content: center;
@@ -191,19 +237,9 @@
           font-size: 14px;
         }
 
-        .button.primary {
-          background: var(--primary);
-          color: white;
-        }
-
-        .button.secondary {
-          background: #f3f4f6;
-        }
-
-        .button.danger {
-          background: var(--red);
-          color: white;
-        }
+        .button.primary { background: var(--primary); color: white; }
+        .button.secondary { background: #f3f4f6; }
+        .button.danger { background: var(--red); color: white; }
 
         /* RESPONSIVE */
 
@@ -212,7 +248,80 @@
             grid-template-columns: 1fr;
           }
         }
+        /* DISABLED SECTION */
+
+.disabled-section {
+  position: relative;
+  opacity: 0.55;
+}
+
+.disabled-section::after {
+  content: "Read only";
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.disabled-section button {
+  pointer-events: none;
+}
+ /* TOOLTIP */
+
+.custom-tooltip {
+  position: fixed;
+  background: #111827;
+  color: white;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.custom-tooltip.visible {
+  opacity: 1;
+}
     </style>
+    <script>
+        console.log("kurwa tooltip code")
+        document.addEventListener("DOMContentLoaded", () => {
+
+          const tooltip = document.createElement("div");
+          tooltip.className = "custom-tooltip";
+          tooltip.textContent = "Not Implemented yet";
+          document.body.appendChild(tooltip);
+
+          const disabledSections = document.querySelectorAll(".disabled-section");
+
+          disabledSections.forEach(section => {
+
+            section.addEventListener("mouseenter", () => {
+              tooltip.classList.add("visible");
+            });
+
+            section.addEventListener("mouseleave", () => {
+              tooltip.classList.remove("visible");
+            });
+
+            section.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.clientX + 12 + "px";
+              tooltip.style.top = e.clientY + 12 + "px";
+            });
+
+          });
+
+        });
+    </script>
 </head>
 
 <body>
@@ -226,17 +335,57 @@
 
     <div>
 
-        <div class="users">
-            <div class="user-badge"><div class="user-dot"></div> Mateusz</div>
-            <div class="user-badge"><div class="user-dot"></div> Andrew</div>
-            <div class="user-badge"><div class="user-dot"></div> Zack</div>
+        <!-- ONE-LINE USERS BAR -->
+        <div class="users-bar">
+
+            <div class="user-badge">
+                <div class="user-dot"></div> Mateusz
+            </div>
+
+            <div class="user-badge">
+                <div class="user-dot"></div> Andrew
+            </div>
+
+            <div class="user-badge">
+                <div class="user-dot"></div> Zack
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="viewer-badge">
+                <div class="viewer-dot"></div> Anna
+            </div>
+
+            <div class="viewer-badge">
+                <div class="viewer-dot"></div> Tom
+            </div>
+
         </div>
 
         <div class="vote-area">
             <div class="cards">
-                <div class="card green">1</div>
-                <div class="card orange">5</div>
-                <div class="card red">21</div>
+
+                <div class="card-group">
+                    <div class="card green">1</div>
+                    <div class="card-users">
+                        <span>Mateusz</span>
+                    </div>
+                </div>
+
+                <div class="card-group">
+                    <div class="card orange">5</div>
+                    <div class="card-users">
+                        <span>Andrew</span>
+                    </div>
+                </div>
+
+                <div class="card-group">
+                    <div class="card red">21</div>
+                    <div class="card-users">
+                        <span>Zack</span>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -259,14 +408,14 @@
             <div class="proposed">13</div>
         </div>
 
-        <div class="panel">
+        <div class="panel disabled-section">
             <h3>Story</h3>
             <p style="font-size:14px; color: var(--muted); line-height:1.5;">
-                DXF-12345 – Add authentication middleware with JWT validation and refresh token support.
+            TD-420 Dummy placeholder
             </p>
         </div>
 
-        <div class="panel">
+        <div class="panel disabled-section">
             <h3>Host Controls</h3>
             <button class="button primary">Reveal cards</button>
             <button class="button secondary">Next story</button>
