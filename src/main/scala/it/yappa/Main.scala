@@ -51,16 +51,20 @@ object Main extends IOApp.Simple:
       Ok("healthy")
 
     case GET -> Root / "room" / id =>
-    romRepository.get(id) match
-      case Some(room) => Ok(room.toRoomResponse)
-      case None       => NotFound() 
-      
-      
-    case req @ GET -> Root / "ui" =>
-        StaticFile
-          .fromResource("/public/index.html", Some(req))
-          .getOrElseF(NotFound())
+      romRepository.get(id) match
+        case Some(room) => Ok(room.toRoomResponse)
+        case None => NotFound()
 
+
+    case req@GET -> Root / "ui" =>
+      StaticFile
+        .fromResource("/public/index.html", Some(req))
+        .getOrElseF(NotFound())
+
+    case req@GET -> Root / "game" =>
+      StaticFile
+        .fromResource("/public/game.html", Some(req))
+        .getOrElseF(NotFound())
 
     case req@POST -> Root / "echo" =>
       req.as[String].flatMap(body => Ok(body))
