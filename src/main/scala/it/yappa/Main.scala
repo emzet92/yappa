@@ -25,7 +25,7 @@ object Main extends IOApp.Simple:
 
   val result = ctx.eval("python", "sum([1,2,3])")
   println(result.asInt())
-  
+
   val logo =
     """
       |  _   _  __ _ _ __  _ __   __ _
@@ -108,7 +108,7 @@ object Main extends IOApp.Simple:
       start <- Clock[IO].monotonic
       _ <- IO.println(logo)
       _ <- IO.println("Starting HTTP server...")
-
+      _ <- IO.println(s"Hello from python: $result")
       planningPoker <- PlanningPoker.create[IO]
 
       _ <- EmberServerBuilder

@@ -1,36 +1,45 @@
-
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
-ThisBuild / scalaVersion := "3.8.1"
+ThisBuild / scalaVersion := "3.3.1"
 
 lazy val root = (project in file("."))
+  .enablePlugins(JavaAppPackaging, GraalVMNativeImagePlugin)
   .settings(
-    name := "yappa"
+    name := "planning-poker-app",
+
+    Compile / mainClass := Some("it.yappa.Main"),
+    GraalVMNativeImage / mainClass := Some("it.yappa.Main"),
+
+    libraryDependencies ++= Seq(
+      // Test
+      "org.scalameta" %% "munit" % "1.2.2" % Test,
+
+      // Cats
+      "org.typelevel" %% "cats-core" % "2.13.0",
+      "org.typelevel" %% "cats-effect" % "3.6.3",
+
+      // http4s
+      "org.http4s" %% "http4s-ember-server" % "0.23.33",
+      "org.http4s" %% "http4s-dsl" % "0.23.33",
+      "org.http4s" %% "http4s-core" % "0.23.33",
+      "org.http4s" %% "http4s-circe" % "0.23.33",
+
+      // Circe
+      "io.circe" %% "circe-generic" % "0.14.15",
+
+      // GraalVM Polyglot + Python
+      "org.graalvm.polyglot" % "polyglot" % "25.0.2",
+      "org.graalvm.python" % "python-embedding" % "25.0.2"
+
+      // DB opcjonalnie:
+      // "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
+      // "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC11",
+      // "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
+    ),
+
+    GraalVMNativeImage / graalVMNativeImageOptions ++= Seq(
+      "--no-fallback",
+      "--enable-http",
+      "--enable-https",
+      "--report-unsupported-elements-at-runtime"
+    )
   )
-libraryDependencies ++= Seq(
-  // Test
-  "org.scalameta" %% "munit" % "1.2.2" % Test,
-
-  // Cats
-  "org.typelevel" %% "cats-core" % "2.13.0",
-  "org.typelevel" %% "cats-effect" % "3.6.3",
-
-  // http4s (Ember server)
-  "org.http4s" %% "http4s-ember-server" % "0.23.33",
-  "org.http4s" %% "http4s-dsl" % "0.23.33",
-  "org.http4s" %% "http4s-core" % "0.23.33",
-  "org.http4s" %% "http4s-circe" % "0.23.33",
-
-  // Circe
-  "io.circe" %% "circe-generic" % "0.14.15",
-// Working version:  openjdk 21.0.2 2024-01-16
-//  // Doobie
-//  "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
-//  "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC11",
-//
-//  // SQLite
-//  "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
-)
-
-assembly := (assembly dependsOn Test / test).value
-assembly / assemblyJarName := "planning-poker-app.jar"
