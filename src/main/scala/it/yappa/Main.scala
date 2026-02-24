@@ -24,6 +24,8 @@ object Main extends IOApp.Simple:
     .build()
 
   val result = ctx.eval("python", "sum([1,2,3])")
+  ctx.eval("python", "print('Hello from Python!')")
+
   println(result.asInt())
 
   val logo =

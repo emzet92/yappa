@@ -28,12 +28,12 @@ lazy val root = (project in file("."))
 
       // GraalVM Polyglot + Python
       "org.graalvm.polyglot" % "polyglot" % "25.0.2",
-      "org.graalvm.python" % "python-embedding" % "25.0.2"
+      "org.graalvm.python" % "python-embedding" % "25.0.2",
 
       // DB opcjonalnie:
-      // "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
-      // "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC11",
-      // "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
+       "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
+       "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC11",
+       "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
     ),
 
     GraalVMNativeImage / graalVMNativeImageOptions ++= Seq(
