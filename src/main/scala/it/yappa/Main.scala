@@ -9,7 +9,7 @@ import org.http4s.circe.*
 import io.circe.*
 import io.circe.generic.semiauto.*
 import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
-//import org.graalvm.polyglot.Context
+import org.graalvm.polyglot.Context
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 
 // ===== JSON request decoding =====
@@ -18,15 +18,31 @@ given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
 given Decoder[SubmitVoteRequest] = deriveDecoder
 given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
 
-object Main extends IOApp.Simple:
-//  val ctx = Context.newBuilder("python")
-//    .allowAllAccess(true)
-//    .build()
-//
-//  val result = ctx.eval("python", "sum([1,2,3])")
-//  ctx.eval("python", "print('Hello from Python!')")
+class GameMath {
+  def add(a: Int, b: Int) = a + b
+  def greet(name: String) = s"Hello from $name"
+}
 
-//  println(result.asInt())
+object Main extends IOApp.Simple:
+  val ctx = Context.newBuilder("python")
+    .allowAllAccess(true)
+    .build()
+
+  val result = ctx.eval("python", "sum([1,2,3])")
+  ctx.eval("python", "print('Hello from Python!')")
+
+  println(result.asInt())
+
+
+  // Wystawiamy obiekt do Pythona
+  ctx.getBindings("python").putMember("gameMath", GameMath())
+
+  ctx.eval("python",
+    """
+print(gameMath.add(3, 4))
+print(gameMath.greet("Scala gamer"))
+    """
+  )
 
   val logo =
     """
@@ -99,18 +115,18 @@ object Main extends IOApp.Simple:
 
       case req@PUT -> Root / "room" / roomId / "vote" =>
         req.as[SubmitVoteRequest].flatMap { body =>
-        planningPoker.submitVote(roomId, body).attempt.flatMap {
-          case Right(room) => Ok(room.toRoomResponse)
-          case Left(_) => BadRequest("Invalid vote")
+          planningPoker.submitVote(roomId, body).attempt.flatMap {
+            case Right(room) => Ok(room.toRoomResponse)
+            case Left(_) => BadRequest("Invalid vote")
+          }
         }
-      }
 
   override def run: IO[Unit] =
     for
       start <- Clock[IO].monotonic
       _ <- IO.println(logo)
       _ <- IO.println("Starting HTTP server...")
-//      _ <- IO.println(s"Hello from python: $result")
+      //      _ <- IO.println(s"Hello from python: $result")
       planningPoker <- PlanningPoker.create[IO]
 
       _ <- EmberServerBuilder

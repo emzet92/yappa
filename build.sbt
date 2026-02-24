@@ -27,8 +27,8 @@ lazy val root = (project in file("."))
       "io.circe" %% "circe-generic" % "0.14.15",
 
       // GraalVM Polyglot + Python
-//      "org.graalvm.polyglot" % "polyglot" % "25.0.2",
-//      "org.graalvm.python" % "python-embedding" % "25.0.2",
+      "org.graalvm.polyglot" % "polyglot" % "25.0.2",
+      "org.graalvm.python" % "python-embedding" % "25.0.2",
 
       // DB opcjonalnie:
        "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
