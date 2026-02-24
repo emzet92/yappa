@@ -9,6 +9,7 @@ import org.http4s.circe.*
 import io.circe.*
 import io.circe.generic.semiauto.*
 import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
+import org.graalvm.polyglot.Context
 import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
 
 // ===== JSON request decoding =====
@@ -18,7 +19,13 @@ given Decoder[SubmitVoteRequest] = deriveDecoder
 given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
 
 object Main extends IOApp.Simple:
+  val ctx = Context.newBuilder("python")
+    .allowAllAccess(true)
+    .build()
 
+  val result = ctx.eval("python", "sum([1,2,3])")
+  println(result.asInt())
+  
   val logo =
     """
       |  _   _  __ _ _ __  _ __   __ _
