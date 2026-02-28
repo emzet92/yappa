@@ -3,5 +3,9 @@
     "name": "it.yappa.GameMath",
     "allPublicMethods": true,
     "allDeclaredConstructors": true
+  },
+  {
+    "name": "org.sqlite.JDBC",
+    "allDeclaredConstructors": true
   }
 ]

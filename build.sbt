@@ -28,7 +28,6 @@ lazy val root = (project in file("."))
 
       // DB opcjonalnie:
        "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
-       "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC11",
        "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
     ),
 
@@ -36,6 +35,7 @@ lazy val root = (project in file("."))
       "--no-fallback",
       "--enable-http",
       "--enable-https",
-      "--report-unsupported-elements-at-runtime"
+      "--report-unsupported-elements-at-runtime",
+      "--enable-native-access=ALL-UNNAMED"
     )
   )

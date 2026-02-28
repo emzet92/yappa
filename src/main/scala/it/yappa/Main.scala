@@ -2,26 +2,58 @@ package it.yappa
 
 import cats.effect.{Clock, IO, IOApp}
 import com.comcast.ip4s.{host, port}
+import doobie.*
+import doobie.implicits.*
+import doobie.util.transactor.Transactor
+import io.circe.*
+import io.circe.generic.semiauto.*
 import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.circe.*
-import io.circe.*
-import io.circe.generic.semiauto.*
-import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
-import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
+import org.http4s.circe.CirceEntityCodec.*
 
-// ===== JSON request decoding =====
+import scala.concurrent.duration.*
+import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
+
+import java.time.Instant
+
+// ===== JSON =====
 given Decoder[CreateRoomRequest] = deriveDecoder
 given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
 given Decoder[SubmitVoteRequest] = deriveDecoder
 given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
 
-class GameMath {
-  def add(a: Int, b: Int) = a + b
+case class User(id: Long, name: String)
 
-  def greet(name: String) = s"Hello from $name"
-}
+// ===== SQLite Transactor (NO Hikari) =====
+val xa: Transactor[IO] =
+  Transactor.fromDriverManager[IO](
+    driver = "org.sqlite.JDBC",
+    url = "jdbc:sqlite:app.db",
+    logHandler = None
+  )
+
+// ===== DB INIT =====
+def initDb: IO[Unit] =
+  sql"""
+    CREATE TABLE IF NOT EXISTS users (
+      id   INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    )
+  """.update.run.transact(xa).void
+
+def insertUser(name: String): IO[Unit] =
+  sql"""
+    INSERT INTO users (name)
+    VALUES ($name)
+  """.update.run.transact(xa).void
+
+def selectAll: IO[List[User]] =
+  sql"""
+    SELECT id, name
+    FROM users
+  """.query[User].to[List].transact(xa)
 
 object Main extends IOApp.Simple:
 
@@ -35,10 +67,8 @@ object Main extends IOApp.Simple:
       |  |___/      |_|   |_|
       """.stripMargin
 
-  // --- tiny helper for consistent error handling ---
   private def logAnd500(where: String, e: Throwable): IO[Response[IO]] =
-    IO.println(s"[ERROR] $where: ${e.getClass.getName}: ${e.getMessage}") *>
-      IO.println(e) *>
+    IO.println(s"[ERROR] $where: ${e.getMessage}") *>
       InternalServerError("internal server error")
 
   private def routes(planningPoker: PlanningPoker[IO]): HttpRoutes[IO] =
@@ -52,63 +82,58 @@ object Main extends IOApp.Simple:
 
       case GET -> Root / "room" / id =>
         planningPoker.find(id).attempt.flatMap {
-          case Right(InvalidResponse) =>
-            NotFound()
-
-          case Right(v: ValidResponse) =>
-            Ok(v) // requires Encoder[ValidResponse]
-
-          case Left(e) =>
-            logAnd500(s"GET /room/$id failed", e)
+          case Right(InvalidResponse) => NotFound()
+          case Right(v: ValidResponse) => Ok(v)
+          case Left(e) => logAnd500(s"GET /room/$id", e)
         }
 
       case req@POST -> Root / "room" =>
         req.as[CreateRoomRequest].attempt.flatMap {
-          case Left(e) =>
-            // To zwykle będzie błąd dekodowania JSON – semantycznie 400
-            IO.println(s"[WARN] POST /room decode failed: ${e.getMessage}") *>
-              BadRequest("invalid json body")
+          case Left(_) =>
+            BadRequest("invalid json body")
 
           case Right(body) =>
             planningPoker.createRoom(body).attempt.flatMap {
               case Right(created) =>
-                Created(created.toRoomResponse) // requires Encoder[CreateResponseType]
-
+                Created(created.toRoomResponse)
               case Left(e) =>
-                logAnd500("POST /room create failed", e)
+                logAnd500("POST /room", e)
             }
         }
 
       case PUT -> Root / "room" / id =>
         planningPoker.startVoting(id)
           .flatMap(room => Ok(room.toRoomResponse))
-          .handleErrorWith(_ => BadRequest("Sssij pałe"))
-
-      case req@GET -> Root / "ui" =>
-        StaticFile
-          .fromResource("/public/index.html", Some(req))
-          .getOrElseF(NotFound())
-
-      case req@GET -> Root / "game" =>
-        StaticFile
-          .fromResource("/public/game.html", Some(req))
-          .getOrElseF(NotFound())
+          .handleErrorWith(_ => BadRequest("cannot start voting"))
 
       case req@PUT -> Root / "room" / roomId / "vote" =>
         req.as[SubmitVoteRequest].flatMap { body =>
           planningPoker.submitVote(roomId, body).attempt.flatMap {
             case Right(room) => Ok(room.toRoomResponse)
-            case Left(_) => BadRequest("Invalid vote")
+            case Left(_) => BadRequest("invalid vote")
           }
         }
+
+      case req@GET -> Root / "test" =>
+        for
+          _ <- IO.println(s"[REQ] ${req.method} ${req.uri} ${Instant.now()}")
+          all <- selectAll
+          res <- Ok(all.headOption.map(_.name).getOrElse("no users"))
+        yield res
 
   override def run: IO[Unit] =
     for
       start <- Clock[IO].monotonic
       _ <- IO.println(logo)
-      _ <- IO.println(s"PID: (${ProcessHandle.current().pid()})")
+      _ <- IO.println(s"PID: ${ProcessHandle.current().pid()}")
       _ <- IO.println("Starting HTTP server...")
-      //      _ <- IO.println(s"Hello from python: $result")
+
+      // ===== INIT DB =====
+      _ <- initDb
+      _ <- insertUser("Mateusz")
+      users <- selectAll
+      _ <- IO.println(s"Users in DB: $users")
+
       planningPoker <- PlanningPoker.create[IO]
 
       _ <- EmberServerBuilder
