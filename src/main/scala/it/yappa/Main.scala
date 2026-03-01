@@ -156,14 +156,6 @@ object Main extends IOApp.Simple:
             }
         }
 
-      case GET -> Root / "metrics" =>
-        IO.blocking {
-          val snapshots = PrometheusRegistry.defaultRegistry.scrape()
-          val baos = new ByteArrayOutputStream()
-          ExpositionFormats.init().getPrometheusTextFormatWriter().write(baos, snapshots)
-          baos.toString("UTF-8")
-        }.flatMap(Ok(_))
-
       case req@GET -> Root / "test" =>
         for
           _ <- IO.println(s"[REQ] ${req.method} ${req.uri} ${Instant.now()}")
