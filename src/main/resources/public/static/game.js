@@ -162,6 +162,9 @@ function renderControls(room) {
   const panel = document.querySelector(".controls-panel");
   panel.innerHTML = "<h3>Host Controls</h3>";
 
+  const me = room.participants.find(p => p.id === currentParticipant?.participantId);
+  if (!me?.isAdmin) return;
+
   if (room.state === "Waiting" || room.state === "Revealed") {
     const btn = document.createElement("button");
     btn.className = "button primary";

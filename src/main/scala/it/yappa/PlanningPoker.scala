@@ -77,7 +77,7 @@ case class ValidResponse(id: String,
 
 case object InvalidResponse extends RoomResponse
 
-case class ParticipantResponse(id: String, name: String)
+case class ParticipantResponse(id: String, name: String, isAdmin: Boolean)
 
 case class CurrentRoundResponse(id: String, votes: Map[String, String])
 
@@ -91,7 +91,7 @@ extension (round: Round) {
 }
 
 extension (p: Map[ParticipantId, Participant]) {
-  def toResponse: List[ParticipantResponse] = p.toList.map(p1 => ParticipantResponse(p1._2.id.value.toString(), p1._2.name))
+  def toResponse: List[ParticipantResponse] = p.toList.map(p1 => ParticipantResponse(p1._2.id.value.toString(), p1._2.name, p1._2.isAdmin))
 }
 
 extension (room: Room)
