@@ -12,8 +12,12 @@ import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.circe.*
 import org.http4s.circe.CirceEntityCodec.*
+import io.opentelemetry.exporter.prometheus.PrometheusMetricReader
+import io.prometheus.metrics.expositionformats.ExpositionFormats
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.typelevel.otel4s.oteljava.OtelJava
 
+import java.io.ByteArrayOutputStream
 import scala.concurrent.duration.*
 import it.yappa.Room.{CreateRoomRequest, JoinRoomRequest, SubmitVoteRequest}
 
@@ -152,6 +156,14 @@ object Main extends IOApp.Simple:
             }
         }
 
+      case GET -> Root / "metrics" =>
+        IO.blocking {
+          val snapshots = PrometheusRegistry.defaultRegistry.scrape()
+          val baos = new ByteArrayOutputStream()
+          ExpositionFormats.init().getPrometheusTextFormatWriter().write(baos, snapshots)
+          baos.toString("UTF-8")
+        }.flatMap(Ok(_))
+
       case req@GET -> Root / "test" =>
         for
           _ <- IO.println(s"[REQ] ${req.method} ${req.uri} ${Instant.now()}")
@@ -160,7 +172,13 @@ object Main extends IOApp.Simple:
         yield res
 
   override def run: IO[Unit] =
-    OtelJava.autoConfigured[IO]().use { otel =>
+    OtelJava.autoConfigured[IO] { builder =>
+      builder
+        .addPropertiesCustomizer(_ => java.util.Map.of("otel.metrics.exporter", "none"))
+        .addMeterProviderCustomizer((b, _) =>
+          b.registerMetricReader(PrometheusMetricReader.create())
+        )
+    }.use { otel =>
       for
         start   <- Clock[IO].monotonic
         _       <- IO.println(logo)
