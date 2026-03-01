@@ -296,20 +296,21 @@
         /* ---------------- COOKIE HELPERS ---------------- */
 
         function setParticipantCookie(roomId, participantId, name) {
-          const value = JSON.stringify({ participantId, name });
-          document.cookie = `participant_${roomId}=${encodeURIComponent(value)}; path=/; max-age=86400`;
+          const value = JSON.stringify({ roomId, participantId, name });
+          document.cookie = `yappa_participant=${encodeURIComponent(value)}; path=/; max-age=86400; SameSite=Lax`;
         }
 
         function getParticipantCookie(roomId) {
-          const prefix = `participant_${roomId}=`;
-          for (const c of document.cookie.split(';')) {
-            const trimmed = c.trim();
-            if (trimmed.startsWith(prefix)) {
-              try { return JSON.parse(decodeURIComponent(trimmed.slice(prefix.length))); }
-              catch { return null; }
-            }
+          const match = document.cookie.split(';')
+            .map(c => c.trim())
+            .find(c => c.startsWith('yappa_participant='));
+          if (!match) return null;
+          try {
+            const data = JSON.parse(decodeURIComponent(match.slice('yappa_participant='.length)));
+            return data.roomId === roomId ? data : null;
+          } catch {
+            return null;
           }
-          return null;
         }
 
         let currentParticipant = null;
@@ -357,7 +358,7 @@
           }
 
           currentParticipant = getParticipantCookie(roomId);
-
+          console.log('show me current participant', currentParticipant);
           if (!currentParticipant) {
             document.getElementById("joinModal").style.display = "grid";
           } else {

@@ -129,8 +129,8 @@
 </main>
 <script>
     function setParticipantCookie(roomId, participantId, name) {
-      const value = JSON.stringify({ participantId, name });
-      document.cookie = `participant_${roomId}=${encodeURIComponent(value)}; path=/; max-age=86400`;
+      const value = JSON.stringify({ roomId, participantId, name });
+      document.cookie = `yappa_participant=${encodeURIComponent(value)}; path=/; max-age=86400; SameSite=Lax`;
     }
 
     document.getElementById("createRoomForm").addEventListener("submit", async function (e) {
