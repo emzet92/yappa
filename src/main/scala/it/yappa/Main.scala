@@ -100,6 +100,15 @@ object Main extends IOApp.Simple:
                 logAnd500("POST /room", e)
             }
         }
+      case req@GET -> Root / "ui" =>
+        StaticFile
+          .fromResource("/public/index.html", Some(req))
+          .getOrElseF(NotFound())
+
+      case req@GET -> Root / "game" =>
+        StaticFile
+          .fromResource("/public/game.html", Some(req))
+          .getOrElseF(NotFound())
 
       case PUT -> Root / "room" / id =>
         planningPoker.startVoting(id)
