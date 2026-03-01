@@ -43,6 +43,7 @@ lazy val root = (project in file("."))
       "--enable-https",
       "--report-unsupported-elements-at-runtime",
       "--enable-native-access=ALL-UNNAMED",
-      "-H:IncludeResources=public/.*"
+      "-H:IncludeResources=public/.*",
+      "--install-exit-handlers"
     )
   )
