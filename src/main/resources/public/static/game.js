@@ -163,7 +163,13 @@ function renderControls(room) {
   panel.innerHTML = "<h3>Host Controls</h3>";
 
   const me = room.participants.find(p => p.id === currentParticipant?.participantId);
-  if (!me?.isAdmin) return;
+  if (!me?.isAdmin){
+    const el = document.getElementById('host-control');
+    el.hidden = true;
+
+    return;
+  }
+
 
   if (room.state === "Waiting" || room.state === "Revealed") {
     const btn = document.createElement("button");
