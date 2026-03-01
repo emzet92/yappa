@@ -293,9 +293,44 @@
 }
     </style>
     <script>
+        /* ---------------- COOKIE HELPERS ---------------- */
+
+        function setParticipantCookie(roomId, participantId, name) {
+          const value = JSON.stringify({ participantId, name });
+          document.cookie = `participant_${roomId}=${encodeURIComponent(value)}; path=/; max-age=86400`;
+        }
+
+        function getParticipantCookie(roomId) {
+          const prefix = `participant_${roomId}=`;
+          for (const c of document.cookie.split(';')) {
+            const trimmed = c.trim();
+            if (trimmed.startsWith(prefix)) {
+              try { return JSON.parse(decodeURIComponent(trimmed.slice(prefix.length))); }
+              catch { return null; }
+            }
+          }
+          return null;
+        }
+
+        let currentParticipant = null;
+
+        /* ---------------- LOAD ROOM ---------------- */
+
+        async function loadRoom(roomId) {
+          try {
+            const response = await fetch(`/room/${roomId}`);
+            if (!response.ok) throw new Error("Room not found");
+            const room = await response.json();
+            renderRoom(room);
+          } catch (err) {
+            console.error(err);
+            alert("Failed to load room");
+          }
+        }
+
         document.addEventListener("DOMContentLoaded", async () => {
 
-          /* ---------------- TOOLTIP (twoje stare) ---------------- */
+          /* ---------------- TOOLTIP ---------------- */
 
           const tooltip = document.createElement("div");
           tooltip.className = "custom-tooltip";
@@ -311,7 +346,7 @@
             });
           });
 
-          /* ---------------- LOAD ROOM ---------------- */
+          /* ---------------- INIT ---------------- */
 
           const params = new URLSearchParams(window.location.search);
           const roomId = params.get("id");
@@ -321,21 +356,43 @@
             return;
           }
 
-          try {
-            const response = await fetch(`/room/${roomId}`);
+          currentParticipant = getParticipantCookie(roomId);
 
-            if (!response.ok) {
-              throw new Error("Room not found");
-            }
-
-            const room = await response.json();
-
-            renderRoom(room);
-
-          } catch (err) {
-            console.error(err);
-            alert("Failed to load room");
+          if (!currentParticipant) {
+            document.getElementById("joinModal").style.display = "grid";
+          } else {
+            await loadRoom(roomId);
           }
+
+          /* ---------------- JOIN HANDLER ---------------- */
+
+          document.getElementById("joinBtn").addEventListener("click", async () => {
+            const name = document.getElementById("joinName").value.trim();
+            if (!name) return;
+
+            try {
+              const res = await fetch(`/room/${roomId}/join`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+              });
+
+              if (!res.ok) { alert("Failed to join room"); return; }
+
+              const room = await res.json();
+              const me = room.participants.find(p => p.name === name);
+              if (me) {
+                setParticipantCookie(roomId, me.id, me.name);
+                currentParticipant = { participantId: me.id, name: me.name };
+              }
+
+              document.getElementById("joinModal").style.display = "none";
+              renderRoom(room);
+            } catch (err) {
+              console.error(err);
+              alert("Something went wrong");
+            }
+          });
         });
 
         /* ---------------- RENDER ---------------- */
@@ -460,6 +517,21 @@
 </head>
 
 <body>
+
+<!-- JOIN MODAL -->
+<div id="joinModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; place-items:center;">
+  <div style="background:white; border-radius:14px; padding:32px; width:min(400px,90%); box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+    <h2 style="margin:0 0 8px; font-size:18px; font-weight:600;">Join Room</h2>
+    <p style="margin:0 0 20px; color:#6b7280; font-size:14px; line-height:1.4;">Enter your name to join this planning session.</p>
+    <label style="display:block; font-size:13px; margin-bottom:6px; color:#374151;">Your name</label>
+    <input id="joinName" type="text" placeholder="e.g. Alice" autocomplete="off"
+      style="width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #d1d5db; border-radius:10px; font-size:14px; outline:none; margin-bottom:16px;" />
+    <button id="joinBtn"
+      style="width:100%; padding:10px; border:none; border-radius:10px; background:#4f46e5; color:white; font-weight:600; cursor:pointer; font-size:14px;">
+      Join
+    </button>
+  </div>
+</div>
 
 <header>
     <h1>Planning Poker</h1>
