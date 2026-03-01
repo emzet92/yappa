@@ -195,6 +195,20 @@
           box-shadow: 0 6px 14px rgba(79,70,229,0.2);
         }
 
+        .deck-card.selected {
+          border-color: var(--primary);
+          background: #eef2ff;
+          color: var(--primary);
+          transform: translateY(-8px);
+          box-shadow: 0 8px 20px rgba(79,70,229,0.25);
+        }
+
+        .deck-card.inactive {
+          opacity: 0.35;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
         /* SIDEBAR */
 
         .sidebar {
@@ -314,6 +328,7 @@
         }
 
         let currentParticipant = null;
+        let currentRoomId = null;
 
         /* ---------------- LOAD ROOM ---------------- */
 
@@ -327,6 +342,24 @@
             console.error(err);
             alert("Failed to load room");
           }
+        }
+
+        /* ---------------- VOTE / START VOTING ---------------- */
+
+        async function submitVote(value) {
+          const res = await fetch(`/room/${currentRoomId}/vote`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ participantId: currentParticipant.participantId, value })
+          });
+          if (!res.ok) throw new Error("Vote failed");
+          return res.json();
+        }
+
+        async function startVoting() {
+          const res = await fetch(`/room/${currentRoomId}`, { method: "PUT" });
+          if (!res.ok) throw new Error("Start voting failed");
+          return res.json();
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -358,11 +391,13 @@
           }
 
           currentParticipant = getParticipantCookie(roomId);
-          console.log('show me current participant', currentParticipant);
+          currentRoomId = roomId;
+
           if (!currentParticipant) {
             document.getElementById("joinModal").style.display = "grid";
           } else {
             await loadRoom(roomId);
+            setInterval(() => loadRoom(roomId), 3000);
           }
 
           /* ---------------- JOIN HANDLER ---------------- */
@@ -399,13 +434,59 @@
         /* ---------------- RENDER ---------------- */
 
         function renderRoom(room) {
-
-          // Header ID
           document.querySelector(".room-id").textContent = "Room: " + room.id;
-
           renderParticipants(room);
           renderVotes(room);
           renderProposed(room);
+          renderDeck(room);
+          renderControls(room);
+        }
+
+        /* ---------------- DECK ---------------- */
+
+        function renderDeck(room) {
+          const isVoting = !!room.currentRoundResponse;
+          const myVote = currentParticipant && room.currentRoundResponse?.votes?.[currentParticipant.participantId];
+
+          document.querySelectorAll(".deck-card").forEach(card => {
+            const value = card.textContent.trim();
+            card.classList.toggle("selected", value === myVote);
+            card.classList.toggle("inactive", !isVoting);
+            card.onclick = isVoting ? async () => {
+              try {
+                renderRoom(await submitVote(value));
+              } catch (e) {
+                console.error("Vote error:", e);
+              }
+            } : null;
+          });
+        }
+
+        /* ---------------- CONTROLS ---------------- */
+
+        function renderControls(room) {
+          const panel = document.querySelector(".controls-panel");
+          const isVoting = !!room.currentRoundResponse;
+          panel.innerHTML = "<h3>Host Controls</h3>";
+
+          if (!isVoting) {
+            const btn = document.createElement("button");
+            btn.className = "button primary";
+            btn.textContent = "Start Voting";
+            btn.onclick = async () => {
+              try {
+                renderRoom(await startVoting());
+              } catch (e) {
+                console.error("Start voting error:", e);
+              }
+            };
+            panel.appendChild(btn);
+          } else {
+            const info = document.createElement("p");
+            info.style = "font-size:14px;color:var(--muted);text-align:center;margin:8px 0 0;";
+            info.textContent = "Voting in progress…";
+            panel.appendChild(info);
+          }
         }
 
         /* ---------------- PARTICIPANTS ---------------- */
@@ -623,11 +704,8 @@
             </p>
         </div>
 
-        <div class="panel disabled-section">
+        <div class="panel controls-panel">
             <h3>Host Controls</h3>
-            <button class="button primary">Reveal cards</button>
-            <button class="button secondary">Next story</button>
-            <button class="button danger">End game</button>
         </div>
 
     </div>
