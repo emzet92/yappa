@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("joinModal").style.display = "grid";
   } else {
     await loadRoom(roomId);
-    setInterval(() => loadRoom(roomId), 3000);
+    setInterval(() => loadRoom(roomId), 500);
   }
 
   document.getElementById("joinBtn").addEventListener("click", async () => {
@@ -128,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 /* ---------------- RENDER ---------------- */
 
 function renderRoom(room) {
-  document.querySelector(".room-id").textContent = "Room: " + room.id;
+  document.querySelector(".room-id").textContent = "Room: " + room.roomName;
   renderParticipants(room);
   renderVotes(room);
   renderProposed(room);
