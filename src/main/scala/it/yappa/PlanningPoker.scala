@@ -1,11 +1,13 @@
 package it.yappa
 
 import cats.Monad
-import cats.effect.{Ref, Sync}
+import cats.effect.{IO, Ref, Sync}
 import cats.implicits.{toFlatMapOps, toFunctorOps}
-import io.circe.Encoder
-import io.circe.generic.semiauto.deriveEncoder
-import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
+import io.circe.{Decoder, Encoder}
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import it.yappa.Room.{CreateRoomRequest, JoinRoomRequest, SubmitVoteRequest}
+import org.http4s.EntityDecoder
+import org.http4s.circe.jsonOf
 
 import java.time.Instant
 import java.util.UUID
@@ -130,3 +132,11 @@ object InMemoryRoomRepository:
   def create[F[_] : Sync]: F[InMemoryRoomRepository[F]] =
     Ref.of[F, Map[RoomId, Room]](Map.empty)
       .map(new InMemoryRoomRepository(_))
+
+// ===== JSON =====
+given Decoder[CreateRoomRequest] = deriveDecoder
+given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
+given Decoder[SubmitVoteRequest] = deriveDecoder
+given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
+given Decoder[JoinRoomRequest] = deriveDecoder
+given EntityDecoder[IO, JoinRoomRequest] = jsonOf[IO, JoinRoomRequest]

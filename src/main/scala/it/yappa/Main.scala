@@ -6,30 +6,19 @@ import doobie.*
 import doobie.implicits.*
 import doobie.util.transactor.Transactor
 import io.circe.*
-import io.circe.generic.semiauto.*
 import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.circe.*
 import org.http4s.circe.CirceEntityCodec.*
 import io.opentelemetry.exporter.prometheus.PrometheusMetricReader
-import io.prometheus.metrics.expositionformats.ExpositionFormats
-import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.typelevel.otel4s.oteljava.OtelJava
 
-import java.io.ByteArrayOutputStream
 import scala.concurrent.duration.*
 import it.yappa.Room.{CreateRoomRequest, JoinRoomRequest, SubmitVoteRequest}
 
 import java.time.Instant
 
-// ===== JSON =====
-given Decoder[CreateRoomRequest] = deriveDecoder
-given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
-given Decoder[SubmitVoteRequest] = deriveDecoder
-given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
-given Decoder[JoinRoomRequest] = deriveDecoder
-given EntityDecoder[IO, JoinRoomRequest] = jsonOf[IO, JoinRoomRequest]
 
 case class User(id: Long, name: String)
 
