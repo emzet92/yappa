@@ -1,0 +1,53 @@
+name: Build Native Image (amd64)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-native:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Instalacja sbt
+      - name: Setup sbt
+        uses: sbt/setup-sbt@v1
+
+      # Cache dla SBT (duże przyspieszenie)
+      - name: Cache sbt
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+            ~/.cache/coursier
+          key: sbt-${{ runner.os }}-${{ hashFiles('**/*.sbt') }}
+          restore-keys: |
+            sbt-${{ runner.os }}-
+
+      # Instalacja GraalVM 25.0.2
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: graalvm-community
+          java-version: '25.0.2'
+          cache: 'sbt'
+
+      - name: Show versions
+        run: |
+          java -version
+          native-image --version
+          sbt --version
+
+      - name: Build Native Image
+        run: sbt GraalVMNativeImage/packageBin
+
+      - name: Upload Native Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: yappa-native
+          path: target/graalvm-native-image/
