@@ -125,6 +125,12 @@ object Main extends IOApp.Simple:
           }
         }
 
+      case PUT -> Root / "room" / roomId / "reveal" =>
+        planningPoker.reveal(roomId).attempt.flatMap {
+          case Right(room) => Ok(room.toRoomResponse)
+          case Left(_)     => BadRequest("cannot reveal")
+        }
+
       case req@POST -> Root / "room" / roomId / "join" =>
         req.as[JoinRoomRequest].attempt.flatMap {
           case Left(_) =>

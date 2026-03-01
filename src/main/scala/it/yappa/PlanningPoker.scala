@@ -31,6 +31,14 @@ class PlanningPoker[F[_] : Monad](repository: RoomRepository[F]) {
         repository.save(submittedVote)
     }
 
+  def reveal(roomId: String): F[Room] =
+    repository.get(RoomId(UUID.fromString(roomId))).flatMap {
+      case Some(room) =>
+        repository.save(room.reveal(Instant.now()).getOrElse(throw new RuntimeException("Cannot reveal")))
+      case None =>
+        Monad[F].pure(throw new RuntimeException("Room not found"))
+    }
+
   def join(roomId: String, name: String): F[Room] =
     repository.get(RoomId(UUID.fromString(roomId))).flatMap {
       case Some(room) =>
@@ -63,6 +71,7 @@ trait RoomResponse
 
 case class ValidResponse(id: String,
                          roomName: String,
+                         state: String,
                          participants: List[ParticipantResponse],
                          currentRoundResponse: Option[CurrentRoundResponse]) extends RoomResponse
 
@@ -89,6 +98,7 @@ extension (room: Room)
   def toRoomResponse: ValidResponse = ValidResponse(
     id = room.id.value.toString,
     roomName = room.roomName,
+    state = room.state.toString,
     participants = room.participants.toResponse,
     currentRoundResponse = room.currentRound.map(f => f.toResponse)
   )

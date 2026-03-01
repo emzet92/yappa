@@ -362,6 +362,12 @@
           return res.json();
         }
 
+        async function revealVotes() {
+          const res = await fetch(`/room/${currentRoomId}/reveal`, { method: "PUT" });
+          if (!res.ok) throw new Error("Reveal failed");
+          return res.json();
+        }
+
         document.addEventListener("DOMContentLoaded", async () => {
 
           /* ---------------- TOOLTIP ---------------- */
@@ -445,14 +451,14 @@
         /* ---------------- DECK ---------------- */
 
         function renderDeck(room) {
-          const isVoting = !!room.currentRoundResponse;
+          const canVote = room.state === "Voting";
           const myVote = currentParticipant && room.currentRoundResponse?.votes?.[currentParticipant.participantId];
 
           document.querySelectorAll(".deck-card").forEach(card => {
             const value = card.textContent.trim();
             card.classList.toggle("selected", value === myVote);
-            card.classList.toggle("inactive", !isVoting);
-            card.onclick = isVoting ? async () => {
+            card.classList.toggle("inactive", !canVote);
+            card.onclick = canVote ? async () => {
               try {
                 renderRoom(await submitVote(value));
               } catch (e) {
@@ -466,26 +472,26 @@
 
         function renderControls(room) {
           const panel = document.querySelector(".controls-panel");
-          const isVoting = !!room.currentRoundResponse;
           panel.innerHTML = "<h3>Host Controls</h3>";
 
-          if (!isVoting) {
+          if (room.state === "Waiting" || room.state === "Revealed") {
             const btn = document.createElement("button");
             btn.className = "button primary";
             btn.textContent = "Start Voting";
             btn.onclick = async () => {
-              try {
-                renderRoom(await startVoting());
-              } catch (e) {
-                console.error("Start voting error:", e);
-              }
+              try { renderRoom(await startVoting()); }
+              catch (e) { console.error("Start voting error:", e); }
             };
             panel.appendChild(btn);
-          } else {
-            const info = document.createElement("p");
-            info.style = "font-size:14px;color:var(--muted);text-align:center;margin:8px 0 0;";
-            info.textContent = "Voting in progress…";
-            panel.appendChild(info);
+          } else if (room.state === "Voting") {
+            const btn = document.createElement("button");
+            btn.className = "button secondary";
+            btn.textContent = "Reveal cards";
+            btn.onclick = async () => {
+              try { renderRoom(await revealVotes()); }
+              catch (e) { console.error("Reveal error:", e); }
+            };
+            panel.appendChild(btn);
           }
         }
 
@@ -509,62 +515,79 @@
         /* ---------------- VOTES ---------------- */
 
         function renderVotes(room) {
-
           const voteArea = document.querySelector(".cards");
           voteArea.innerHTML = "";
 
-          if (!room.currentRoundResponse || !room.currentRoundResponse.votes) {
-            return;
-          }
+          if (!room.currentRoundResponse) return;
 
           const votes = room.currentRoundResponse.votes;
+          const isRevealed = room.state === "Revealed";
 
-          // grupujemy participantów po wartości głosu
-          const grouped = {};
-
-          for (const participantId in votes) {
-            const value = votes[participantId];
-
-            if (!grouped[value]) {
-              grouped[value] = [];
+          if (isRevealed) {
+            // Group by value and show actual cards
+            const grouped = {};
+            for (const participantId in votes) {
+              const value = votes[participantId];
+              if (!grouped[value]) grouped[value] = [];
+              const participant = room.participants.find(p => p.id === participantId);
+              if (participant) grouped[value].push(participant.name);
             }
 
-            const participant = room.participants.find(p => p.id === participantId);
-            if (participant) {
-              grouped[value].push(participant.name);
-            }
-          }
+            Object.keys(grouped).forEach(value => {
+              const group = document.createElement("div");
+              group.className = "card-group";
 
-          Object.keys(grouped).forEach(value => {
+              const card = document.createElement("div");
+              card.className = "card " + getCardColor(value);
+              card.textContent = value;
 
-            const group = document.createElement("div");
-            group.className = "card-group";
+              const users = document.createElement("div");
+              users.className = "card-users";
+              grouped[value].forEach(name => {
+                const span = document.createElement("span");
+                span.textContent = name;
+                users.appendChild(span);
+              });
 
-            const card = document.createElement("div");
-            card.className = "card " + getCardColor(value);
-            card.textContent = value;
-
-            const users = document.createElement("div");
-            users.className = "card-users";
-
-            grouped[value].forEach(name => {
-              const span = document.createElement("span");
-              span.textContent = name;
-              users.appendChild(span);
+              group.appendChild(card);
+              group.appendChild(users);
+              voteArea.appendChild(group);
             });
+          } else {
+            // Show face-down card for each participant who has voted
+            Object.keys(votes).forEach(participantId => {
+              const participant = room.participants.find(p => p.id === participantId);
+              if (!participant) return;
 
-            group.appendChild(card);
-            group.appendChild(users);
+              const group = document.createElement("div");
+              group.className = "card-group";
 
-            voteArea.appendChild(group);
-          });
+              const card = document.createElement("div");
+              card.className = "card green";
+              card.textContent = "✓";
+
+              const users = document.createElement("div");
+              users.className = "card-users";
+              const span = document.createElement("span");
+              span.textContent = participant.name;
+              users.appendChild(span);
+
+              group.appendChild(card);
+              group.appendChild(users);
+              voteArea.appendChild(group);
+            });
+          }
         }
 
         /* ---------------- PROPOSED ---------------- */
 
         function renderProposed(room) {
-
           const proposedEl = document.querySelector(".proposed");
+
+          if (room.state !== "Revealed") {
+            proposedEl.textContent = "-";
+            return;
+          }
 
           const votes = room.currentRoundResponse?.votes;
           if (!votes || Object.keys(votes).length === 0) {
@@ -572,10 +595,7 @@
             return;
           }
 
-          const values = Object.values(votes)
-            .map(v => parseInt(v))
-            .filter(v => !isNaN(v));
-
+          const values = Object.values(votes).map(v => parseInt(v)).filter(v => !isNaN(v));
           if (values.length === 0) {
             proposedEl.textContent = "-";
             return;
