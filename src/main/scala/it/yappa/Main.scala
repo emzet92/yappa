@@ -12,6 +12,7 @@ import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.circe.*
 import org.http4s.circe.CirceEntityCodec.*
+import org.typelevel.otel4s.oteljava.OtelJava
 
 import scala.concurrent.duration.*
 import it.yappa.Room.{CreateRoomRequest, JoinRoomRequest, SubmitVoteRequest}
@@ -73,7 +74,7 @@ object Main extends IOApp.Simple:
     IO.println(s"[ERROR] $where: ${e.getMessage}") *>
       InternalServerError("internal server error")
 
-  private def routes(planningPoker: PlanningPoker[IO]): HttpRoutes[IO] =
+  private def routes(planningPoker: PlanningPoker[IO], metrics: AppMetrics): HttpRoutes[IO] =
     HttpRoutes.of[IO]:
 
       case GET -> Root =>
@@ -97,7 +98,7 @@ object Main extends IOApp.Simple:
           case Right(body) =>
             planningPoker.createRoom(body).attempt.flatMap {
               case Right(created) =>
-                Created(created.toRoomResponse)
+                metrics.roomsCreated.add(1L) *> Created(created.toRoomResponse)
               case Left(e) =>
                 logAnd500("POST /room", e)
             }
@@ -125,8 +126,8 @@ object Main extends IOApp.Simple:
       case req@PUT -> Root / "room" / roomId / "vote" =>
         req.as[SubmitVoteRequest].flatMap { body =>
           planningPoker.submitVote(roomId, body).attempt.flatMap {
-            case Right(room) => Ok(room.toRoomResponse)
-            case Left(_) => BadRequest("invalid vote")
+            case Right(room) => metrics.votesSubmitted.add(1L) *> Ok(room.toRoomResponse)
+            case Left(_)     => BadRequest("invalid vote")
           }
         }
 
@@ -144,7 +145,7 @@ object Main extends IOApp.Simple:
           case Right(body) =>
             planningPoker.join(roomId, body.name).attempt.flatMap {
               case Right(room) =>
-                Ok(room.toRoomResponse)
+                metrics.participantsJoined.add(1L) *> Ok(room.toRoomResponse)
 
               case Left(_) =>
                 NotFound("room not found")
@@ -159,32 +160,40 @@ object Main extends IOApp.Simple:
         yield res
 
   override def run: IO[Unit] =
-    for
-      start <- Clock[IO].monotonic
-      _ <- IO.println(logo)
-      _ <- IO.println(s"PID: ${ProcessHandle.current().pid()}")
-      _ <- IO.println("Starting HTTP server...")
+    OtelJava.autoConfigured[IO]().use { otel =>
+      for
+        start   <- Clock[IO].monotonic
+        _       <- IO.println(logo)
+        _       <- IO.println(s"PID: ${ProcessHandle.current().pid()}")
+        _       <- IO.println("Starting HTTP server...")
 
-      // ===== INIT DB =====
-      _ <- initDb
-      _ <- insertUser("Mateusz")
-      users <- selectAll
-      _ <- IO.println(s"Users in DB: $users")
+        // ===== METRICS =====
+        meter   <- otel.meterProvider.meter("it.yappa").get
+        metrics <- AppMetrics.create(meter)
 
-      planningPoker <- PlanningPoker.create[IO]
+        // ===== INIT DB =====
+        _     <- initDb
+        _     <- insertUser("Mateusz")
+        users <- selectAll
+        _     <- IO.println(s"Users in DB: $users")
 
-      _ <- EmberServerBuilder
-        .default[IO]
-        .withHost(host"0.0.0.0")
-        .withPort(port"8080")
-        .withHttpApp(routes(planningPoker).orNotFound)
-        .build
-        .evalTap { _ =>
-          for
-            end <- Clock[IO].monotonic
-            took = (end - start).toMillis
-            _ <- IO.println(s"HTTP server started in ${took} ms 🚀")
-          yield ()
-        }
-        .useForever
-    yield ()
+        planningPoker <- PlanningPoker.create[IO]
+
+        app = AppMetrics.middleware(metrics)(routes(planningPoker, metrics).orNotFound)
+
+        _ <- EmberServerBuilder
+          .default[IO]
+          .withHost(host"0.0.0.0")
+          .withPort(port"8080")
+          .withHttpApp(app)
+          .build
+          .evalTap { _ =>
+            for
+              end  <- Clock[IO].monotonic
+              took  = (end - start).toMillis
+              _    <- IO.println(s"HTTP server started in ${took} ms 🚀")
+            yield ()
+          }
+          .useForever
+      yield ()
+    }

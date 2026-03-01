@@ -26,9 +26,14 @@ lazy val root = (project in file("."))
       // Circe
       "io.circe" %% "circe-generic" % "0.14.15",
 
-      // DB opcjonalnie:
+      // DB
        "org.tpolecat" %% "doobie-core" % "1.0.0-RC11",
-       "org.xerial" % "sqlite-jdbc" % "3.51.1.0"
+       "org.xerial" % "sqlite-jdbc" % "3.51.1.0",
+
+      // OpenTelemetry
+      "org.typelevel" %% "otel4s-oteljava"                          % "0.15.1",
+      "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % "1.59.0" % Runtime,
+      "io.opentelemetry" % "opentelemetry-exporter-otlp"              % "1.59.0" % Runtime
     ),
 
     GraalVMNativeImage / graalVMNativeImageOptions ++= Seq(
