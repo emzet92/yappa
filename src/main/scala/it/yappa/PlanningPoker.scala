@@ -31,6 +31,16 @@ class PlanningPoker[F[_] : Monad](repository: RoomRepository[F]) {
         repository.save(submittedVote)
     }
 
+  def join(roomId: String, name: String): F[Room] =
+    repository.get(RoomId(UUID.fromString(roomId))).flatMap {
+      case Some(room) =>
+        val updated = room.join(name)
+        repository.save(updated)
+
+      case None =>
+        Monad[F].pure(throw new RuntimeException("Room not found"))
+    }
+
   def find(id: String): F[RoomResponse] = repository
     .get(RoomId(UUID.fromString(id)))
     .map {

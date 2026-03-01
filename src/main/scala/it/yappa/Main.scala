@@ -14,7 +14,7 @@ import org.http4s.circe.*
 import org.http4s.circe.CirceEntityCodec.*
 
 import scala.concurrent.duration.*
-import it.yappa.Room.{CreateRoomRequest, SubmitVoteRequest}
+import it.yappa.Room.{CreateRoomRequest, JoinRoomRequest, SubmitVoteRequest}
 
 import java.time.Instant
 
@@ -23,6 +23,8 @@ given Decoder[CreateRoomRequest] = deriveDecoder
 given EntityDecoder[IO, CreateRoomRequest] = jsonOf[IO, CreateRoomRequest]
 given Decoder[SubmitVoteRequest] = deriveDecoder
 given EntityDecoder[IO, SubmitVoteRequest] = jsonOf[IO, SubmitVoteRequest]
+given Decoder[JoinRoomRequest] = deriveDecoder
+given EntityDecoder[IO, JoinRoomRequest] = jsonOf[IO, JoinRoomRequest]
 
 case class User(id: Long, name: String)
 
@@ -121,6 +123,21 @@ object Main extends IOApp.Simple:
             case Right(room) => Ok(room.toRoomResponse)
             case Left(_) => BadRequest("invalid vote")
           }
+        }
+
+      case req@POST -> Root / "room" / roomId / "join" =>
+        req.as[JoinRoomRequest].attempt.flatMap {
+          case Left(_) =>
+            BadRequest("invalid json body")
+
+          case Right(body) =>
+            planningPoker.join(roomId, body.name).attempt.flatMap {
+              case Right(room) =>
+                Ok(room.toRoomResponse)
+
+              case Left(_) =>
+                NotFound("room not found")
+            }
         }
 
       case req@GET -> Root / "test" =>

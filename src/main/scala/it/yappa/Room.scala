@@ -47,7 +47,13 @@ case class Room(
                  participants: Map[ParticipantId, Participant],
                  currentRound: Option[Round]
                ):
-  def addParticipant(participant: Participant): Room =
+  def join(name: String): Room =
+    val participant = Participant(
+      id = ParticipantId(UUID.randomUUID()),
+      name = name,
+      isAdmin = false
+    )
+
     copy(participants = participants.updated(participant.id, participant))
 
   def removeParticipant(participantId: ParticipantId): Room =
@@ -129,3 +135,5 @@ object Room:
   case class CreateRoomRequest(roomName: String, ownerName: String)
 
   case class SubmitVoteRequest(participantId: String, value: String)
+
+  case class JoinRoomRequest(name: String)
