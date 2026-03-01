@@ -102,6 +102,11 @@ object Main extends IOApp.Simple:
                 logAnd500("POST /room", e)
             }
         }
+      case req @ GET -> Root / "static" / fileName =>
+        StaticFile
+          .fromResource(s"/public/static/$fileName", Some(req))
+          .getOrElseF(NotFound())
+
       case req@GET -> Root / "ui" =>
         StaticFile
           .fromResource("/public/index.html", Some(req))
