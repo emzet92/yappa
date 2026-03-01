@@ -107,7 +107,7 @@ object Main extends IOApp.Simple:
                 logAnd500("POST /room", e)
             }
         }
-      case req @ GET -> Root / "static" / fileName =>
+      case req@GET -> Root / "static" / fileName =>
         StaticFile
           .fromResource(s"/public/static/$fileName", Some(req))
           .getOrElseF(NotFound())
@@ -131,14 +131,14 @@ object Main extends IOApp.Simple:
         req.as[SubmitVoteRequest].flatMap { body =>
           planningPoker.submitVote(roomId, body).attempt.flatMap {
             case Right(room) => metrics.votesSubmitted.add(1L) *> Ok(room.toRoomResponse)
-            case Left(_)     => BadRequest("invalid vote")
+            case Left(_) => BadRequest("invalid vote")
           }
         }
 
       case PUT -> Root / "room" / roomId / "reveal" =>
         planningPoker.reveal(roomId).attempt.flatMap {
           case Right(room) => Ok(room.toRoomResponse)
-          case Left(_)     => BadRequest("cannot reveal")
+          case Left(_) => BadRequest("cannot reveal")
         }
 
       case req@POST -> Root / "room" / roomId / "join" =>
@@ -174,26 +174,31 @@ object Main extends IOApp.Simple:
   override def run: IO[Unit] =
     OtelJava.autoConfigured[IO] { builder =>
       builder
-        .addPropertiesCustomizer(_ => java.util.Map.of("otel.metrics.exporter", "none"))
+        .addPropertiesCustomizer(_ =>
+          java.util.Map.of(
+            "otel.metrics.exporter", "prometheus",
+            "otel.exporter.prometheus.port", "9464"
+          )
+        )
         .addMeterProviderCustomizer((b, _) =>
           b.registerMetricReader(PrometheusMetricReader.create())
         )
     }.use { otel =>
       for
-        start   <- Clock[IO].monotonic
-        _       <- IO.println(logo)
-        _       <- IO.println(s"PID: ${ProcessHandle.current().pid()}")
-        _       <- IO.println("Starting HTTP server...")
+        start <- Clock[IO].monotonic
+        _ <- IO.println(logo)
+        _ <- IO.println(s"PID: ${ProcessHandle.current().pid()}")
+        _ <- IO.println("Starting HTTP server...")
 
         // ===== METRICS =====
-        meter   <- otel.meterProvider.meter("it.yappa").get
+        meter <- otel.meterProvider.meter("it.yappa").get
         metrics <- AppMetrics.create(meter)
 
         // ===== INIT DB =====
-        _     <- initDb
-        _     <- insertUser("Mateusz")
+        _ <- initDb
+        _ <- insertUser("Mateusz")
         users <- selectAll
-        _     <- IO.println(s"Users in DB: $users")
+        _ <- IO.println(s"Users in DB: $users")
 
         planningPoker <- PlanningPoker.create[IO]
 
@@ -207,9 +212,9 @@ object Main extends IOApp.Simple:
           .build
           .evalTap { _ =>
             for
-              end  <- Clock[IO].monotonic
-              took  = (end - start).toMillis
-              _    <- IO.println(s"HTTP server started in ${took} ms 🚀")
+              end <- Clock[IO].monotonic
+              took = (end - start).toMillis
+              _ <- IO.println(s"HTTP server started in ${took} ms 🚀")
             yield ()
           }
           .useForever
